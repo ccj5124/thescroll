@@ -399,7 +399,7 @@ const T = {
     eyebrow:'Session report',
     verdict:'You scrolled <u>{d}</u> and nothing in there was yours to keep.',
     lede:'This app was built for one thing: to make you not stop. It worked. Here is exactly what it took from you, measured while you played.',
-    tiles:[['Time inside','SEC'],['Scrolls','SWIPES'],['Finger travelled','M'],['Likes given','TAPS'],['Refreshes','PULLS'],['Real things gained','']],
+    tiles:[['Time inside','SEC'],['Swipes','GESTURES'],['Finger travelled','M'],['Likes given','TAPS'],['Refreshes','PULLS'],['Real things gained','']],
     h2:'Five tricks this app used on you',
     h2sub:'None of these are accidents. Every one is a design decision that somebody got paid to make. The number on the left is what it did to you, personally, in sixty seconds.',
     tricks:[
@@ -520,7 +520,7 @@ const DURATION = 60;          // seconds before the cut
 const PX_PER_M = 3779.5275;   // 96 CSS px per inch -> px per metre
 let lang = (navigator.language||'en').toLowerCase().indexOf('zh')===0 ? 'zh' : 'en';
 function freshState(){
-  return {t0:0, secs:0, px:0, lastTop:0, lastMove:0, scrolls:0, likes:0, refreshes:0,
+  return {t0:0, secs:0, fingerPx:0, lastTop:0, lastMove:0, swipes:0, likes:0, refreshes:0,
           jacks:0, misses:0, streak:0, bestStreak:0, badge:1,
           poolIdx:0, sinceJack:0, running:false};
 }
@@ -693,22 +693,53 @@ function startGame(){
   toastTimer=setInterval(function(){ if(S.running && Math.random()<0.62) showToast(); },5200);
 }
 
+/* Scroll events are NOT gestures: one flick fires dozens of them, and iOS
+   momentum keeps firing after the finger has gone. Counting those inflates the
+   number several times over. So this listener only feeds the infinite scroll,
+   and swipes are counted from the pointer itself below. */
 feed.addEventListener('scroll',function(){
   if(!S.running) return;
   const top=feed.scrollTop;
-  const d=Math.abs(top-S.lastTop);
-  S.px+=d; S.lastTop=top;
-  if(d>34){
-    /* a streak is a thing you can lose: pause for 3 seconds and it breaks */
-    const now=performance.now();
-    if(now-S.lastMove>3000) S.streak=0;
-    S.lastMove=now;
-    S.scrolls++; S.streak++;
-    if(S.streak>S.bestStreak) S.bestStreak=S.streak;
-    if(S.streak>0 && S.streak%12===0) addStreak();
-  }
-  /* infinite: top up long before the bottom, so a bottom is never seen */
+  S.lastTop=top;
   if(feed.scrollHeight - top - feed.clientHeight < 900) addCards(4);
+},{passive:true});
+
+/* one gesture = one swipe */
+function countSwipe(){
+  /* a streak is a thing you can lose: pause for 3 seconds and it breaks */
+  const now=performance.now();
+  if(now-S.lastMove>3000) S.streak=0;
+  S.lastMove=now;
+  S.swipes++; S.streak++;
+  if(S.streak>S.bestStreak) S.bestStreak=S.streak;
+  if(S.streak>0 && S.streak%12===0) addStreak();
+}
+
+/* touch: measure the thumb, not the content it flung */
+let touchY=0, touchMoved=0;
+feed.addEventListener('touchstart',function(e){
+  if(!S.running) return;
+  touchY=e.touches[0].clientY; touchMoved=0;
+},{passive:true});
+feed.addEventListener('touchmove',function(e){
+  if(!S.running) return;
+  const y=e.touches[0].clientY, d=Math.abs(y-touchY);
+  touchY=y; touchMoved+=d; S.fingerPx+=d;
+},{passive:true});
+feed.addEventListener('touchend',function(){
+  if(!S.running) return;
+  if(touchMoved>24) countSwipe();          /* a tap is not a swipe */
+  touchMoved=0;
+},{passive:true});
+
+/* mouse and trackpad: a burst of wheel events is one scroll action */
+let wheelLast=0;
+feed.addEventListener('wheel',function(e){
+  if(!S.running) return;
+  const now=performance.now();
+  S.fingerPx+=Math.abs(e.deltaY);
+  if(now-wheelLast>220) countSwipe();
+  wheelLast=now;
 },{passive:true});
 
 function tick(){
@@ -733,7 +764,7 @@ function cut(){
   },1000);
 }
 
-function metres(){ return S.px/PX_PER_M; }
+function metres(){ return S.fingerPx/PX_PER_M; }
 
 function renderReport(){
   const t=T[lang], m=metres();
@@ -744,7 +775,7 @@ function renderReport(){
   $('r-verdict').innerHTML=t.verdict.replace('{d}',dist);
   $('r-lede').textContent=t.lede;
 
-  const vals=[S.secs, S.scrolls, m.toFixed(1), S.likes, S.refreshes, 0];
+  const vals=[S.secs, S.swipes, m.toFixed(1), S.likes, S.refreshes, 0];
   let g='';
   for(let i=0;i<t.tiles.length;i++){
     g+='<div class="tile'+(i===5?' zero':'')+'">'+
