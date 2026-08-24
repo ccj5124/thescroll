@@ -1,10 +1,10 @@
-# The Scroll
+﻿# The Scroll
 
 A social feed built on purpose to be addictive. After ninety seconds it turns on you and names every trick it just used, with your own numbers next to each one.
 
 Made for a PYP Exhibition on phone addiction.
 
-**Play it:** https://JetChen.github.io/thescroll/
+**Play it:** https://ccj5124.github.io/thescroll/
 
 ## How it works
 
