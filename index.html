@@ -58,6 +58,11 @@ body{
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;touch-action:manipulation;}
 button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;}
 
+/* The UA rule for [hidden] is a bare attribute selector, so any class rule that
+   sets display beats it. .start/.feed/.nav all set display, which silently made
+   the hidden attribute a no-op and left the start screen stacked above the feed. */
+[hidden]{display:none !important;}
+
 .aura{
   position:fixed;inset:0;pointer-events:none;
   background:
