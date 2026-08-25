@@ -751,30 +751,51 @@ function countSwipe(){
   if(S.streak>0 && S.streak%12===0) addStreak();
 }
 
+/* One flick's worth of travel. A drag longer than this did the work of more
+   than one swipe, so it counts as more than one. */
+const SWIPE_PX = 420;
+
 /* touch: measure the thumb, not the content it flung */
-let touchY=0, touchMoved=0;
+let touchY=0, touchMoved=0, touchCounted=0;
+
 feed.addEventListener('touchstart',function(e){
   if(!S.running) return;
-  touchY=e.touches[0].clientY; touchMoved=0;
+  touchY=e.touches[0].clientY; touchMoved=0; touchCounted=0;
 },{passive:true});
+
 feed.addEventListener('touchmove',function(e){
   if(!S.running) return;
   const y=e.touches[0].clientY, d=Math.abs(y-touchY);
   touchY=y; touchMoved+=d; S.fingerPx+=d;
-},{passive:true});
-feed.addEventListener('touchend',function(){
-  if(!S.running) return;
-  if(touchMoved>24) countSwipe();          /* a tap is not a swipe */
-  touchMoved=0;
+  /* a long unbroken drag is worth several swipes, so bank them as they happen */
+  while(touchMoved - touchCounted*SWIPE_PX >= SWIPE_PX){
+    touchCounted++; countSwipe();
+  }
 },{passive:true});
 
-/* mouse and trackpad: a burst of wheel events is one scroll action */
-let wheelLast=0;
+function endTouch(){
+  if(!S.running) return;
+  /* only bank the tail if the drag was too short to have counted already */
+  if(touchCounted===0 && touchMoved>24) countSwipe();   /* a tap is not a swipe */
+  touchMoved=0; touchCounted=0;
+}
+feed.addEventListener('touchend',endTouch,{passive:true});
+/* iOS fires touchcancel, NOT touchend, the moment it takes the gesture over for
+   scrolling. Listening only for touchend missed most swipes on a real phone. */
+feed.addEventListener('touchcancel',endTouch,{passive:true});
+
+/* mouse and trackpad: a new burst is a new action, and a long continuous
+   trackpad glide keeps banking swipes rather than collapsing into one */
+let wheelLast=0, wheelPx=0;
 feed.addEventListener('wheel',function(e){
   if(!S.running) return;
-  const now=performance.now();
-  S.fingerPx+=Math.abs(e.deltaY);
-  if(now-wheelLast>220) countSwipe();
+  const now=performance.now(), d=Math.abs(e.deltaY);
+  S.fingerPx+=d;
+  if(now-wheelLast>220){ wheelPx=0; countSwipe(); }
+  else {
+    wheelPx+=d;
+    if(wheelPx>=SWIPE_PX){ wheelPx=0; countSwipe(); }
+  }
   wheelLast=now;
 },{passive:true});
 
