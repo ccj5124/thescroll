@@ -1,6 +1,6 @@
 ﻿# The Scroll
 
-A social feed built on purpose to be addictive. After sixty seconds it turns on you and names every trick it just used, with your own numbers next to each one.
+A social feed built on purpose to be addictive. After thirty seconds it turns on you and names every trick it just used, with your own numbers next to each one.
 
 Made for a PYP Exhibition on phone addiction.
 
@@ -8,7 +8,7 @@ Made for a PYP Exhibition on phone addiction.
 
 ## How it works
 
-For the first sixty seconds it is just an app called Loop. Nothing on screen hints that it is a lesson. Then the screen cuts to white and the whole thing becomes a cold session report.
+For the first thirty seconds it is just an app called Loop. Nothing on screen hints that it is a lesson. Then the screen cuts to white and the whole thing becomes a cold session report.
 
 Every number in the report is really measured while you play, not invented:
 
@@ -46,12 +46,12 @@ The only network request is the Google Fonts stylesheet. Everything else, includ
 
 - Hand the device over and say nothing. The reversal only lands if the player was not warned.
 - Add it to the iPad home screen to get it fullscreen with no browser chrome.
-- A round is sixty seconds and **Play again** fully resets, so a queue keeps moving.
+- A round is thirty seconds and **Play again** fully resets, so a queue keeps moving.
 - Good question to ask once the report is up: *was that your self control, or was that the design?*
 
 ## Tuning
 
-The reward schedule lives in `makeCard()` in `index.html`. Gold cards use a variable-ratio schedule with a pity timer at 18 cards, which lands every session between two and four hits, so the `×N` markers in the report are never zero. `DURATION` at the top of the script sets the round length in seconds.
+The reward schedule lives in `makeCard()` in `index.html`. Gold cards use a variable-ratio schedule with a pity timer at 10 cards, which lands every round two or three hits, so the `×N` markers in the report are never zero. `DURATION` at the top of the script sets the round length in seconds.
 
 ## Licence
 
